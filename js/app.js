@@ -4,7 +4,7 @@
  */
 import { poolDB, templateDB } from './db.js';
 import { getApiKey, setApiKey, extractDataFromImage, getSelectedModel, setSelectedModel } from './gemini.js';
-import { DEFAULT_SHEET_ID } from './constants.js';
+import { DEFAULT_SHEET_ID, DEFAULT_TEMPLATES } from './constants.js';
 import {
     buildMasterData, matchPlayers, resolveCountryCode,
     populateTemplate, downloadCSV
@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         initAdminPanel();
         await loadMasterData(); // 起動時にマスターを読み込む
+        await initDefaultTemplates(); // デフォルトテンプレートの自動登録
         await refreshTemplateList();
         initImageUpload();
         initProcessButton();
@@ -45,6 +46,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         addLog(`初期化エラー: ${err.message}`, 'error');
     }
 });
+
+/**
+ * テンプレートが空の場合、サーバー上の標準ファイルを自動登録する
+ */
+async function initDefaultTemplates() {
+    const existing = await templateDB.getAll();
+    if (existing.length === 0 && DEFAULT_TEMPLATES && DEFAULT_TEMPLATES.length > 0) {
+        addLog('標準テンプレートをセットアップ中...', 'info');
+        const { decodeFileContents } = await import('./csv-processor.js');
+
+        for (const filename of DEFAULT_TEMPLATES) {
+            try {
+                // 実行ディレクトリ内の templates/ フォルダから取得を試みる
+                const response = await fetch(`./templates/${filename}`);
+                if (response.ok) {
+                    const buffer = await response.arrayBuffer();
+                    const text = decodeFileContents(buffer);
+                    await templateDB.save(filename, text);
+                    addLog(`標準テンプレート「${filename}」を初期登録しました`, 'success');
+                }
+            } catch (e) {
+                console.warn(`Default template ${filename} not found on server. Skipping.`);
+            }
+        }
+    }
+}
 
 // ──── 管理者パネル・設定 ────
 function initAdminPanel() {
