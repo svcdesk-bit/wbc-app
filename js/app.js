@@ -4,7 +4,7 @@
  */
 import { poolDB, templateDB } from './db.js';
 import { getApiKey, setApiKey, extractDataFromImage, getSelectedModel, setSelectedModel } from './gemini.js';
-import { DEFAULT_SHEET_ID, DEFAULT_TEMPLATES } from './constants.js';
+import { DEFAULT_SHEET_ID, DEFAULT_TEMPLATES, GEMINI_MODELS } from './constants.js';
 import {
     buildMasterData, matchPlayers, resolveCountryCode,
     populateTemplate, downloadCSV
@@ -110,6 +110,17 @@ function initAdminPanel() {
             showToast('APIキーを保存しました');
         }
     });
+
+    // モデル選択の初期化
+    const modelSelect = document.getElementById('model-select');
+    if (modelSelect) {
+        modelSelect.innerHTML = GEMINI_MODELS.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+        modelSelect.value = getSelectedModel();
+        modelSelect.onchange = (e) => {
+            setSelectedModel(e.target.value);
+            addLog(`モデルを ${e.target.value} に変更しました。`, 'info');
+        };
+    }
 }
 
 // ──── マスターデータの読込 (Shared) ────
@@ -326,16 +337,32 @@ function displayResults(type, players, countryCode) {
         : ['選手ID', 'PLAYER', 'PLAYER_KANA', 'マスター選手名', 'G', 'W', 'L', 'SV', 'IP', 'SO', 'ERA', 'ER'];
 
     const thead = `<tr>${keys.map(k => `<th>${k === 'PLAYER_KANA' ? '抽出カナ' : k}</th>`).join('')}</tr>`;
-    const tbody = players.map(p => {
+    const tbody = players.map((p, idx) => {
         const rowId = (p['選手ID'] || p['ID'] || '').toString();
         const rowClass = rowId ? '' : ' class="row-unmatched"';
         return `<tr${rowClass}>${keys.map(k => {
+            if (k === '選手ID' && !rowId) {
+                return `<td><input type="text" class="input-inline manual-id-input" placeholder="ID入力" data-index="${idx}"></td>`;
+            }
             const val = p[k] ?? '';
-            return `<td>${(k === '選手ID' && !rowId) ? '❌未照合' : val}</td>`;
+            return `<td>${val}</td>`;
         }).join('')}</tr>`;
     }).join('');
 
     table.innerHTML = `<thead>${thead}</thead><tbody>${tbody}</tbody>`;
+
+    // 手動ID入力イベント
+    table.querySelectorAll('.manual-id-input').forEach(input => {
+        input.addEventListener('change', (e) => {
+            const idx = parseInt(e.target.dataset.index);
+            const newId = e.target.value.trim();
+            if (players[idx]) {
+                players[idx]['選手ID'] = newId;
+                addLog(`選手 「${players[idx].PLAYER}」 に ID ${newId} を手動設定しました`, 'info');
+            }
+        });
+    });
+
     document.getElementById('result-section').style.display = 'block';
 
     const dlBtn = document.getElementById('download-btn');

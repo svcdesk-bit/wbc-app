@@ -1034,3 +1034,32 @@ body::before {
 .hidden-input {
   display: none;
 }
+/* ──── カスタム追加スタイル ──── */
+
+/* インライン入力（テーブル内など） */
+.input-inline {
+  width: 100%;
+  padding: 4px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-main);
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  min-width: 80px;
+}
+
+.input-inline:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+/* 未照合行の強調 */
+.row-unmatched {
+  background-color: rgba(239, 68, 68, 0.05) !important;
+}
+
+.row-unmatched td {
+  border-bottom: 1px solid rgba(239, 68, 68, 0.2) !important;
+}
