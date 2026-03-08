@@ -4,6 +4,7 @@
  */
 import { poolDB, templateDB } from './db.js';
 import { getApiKey, setApiKey, extractDataFromImage, getSelectedModel, setSelectedModel } from './gemini.js';
+import { DEFAULT_SHEET_ID } from './constants.js';
 import {
     buildMasterData, matchPlayers, resolveCountryCode,
     populateTemplate, downloadCSV
@@ -59,17 +60,18 @@ function initAdminPanel() {
     const apiKeyInput = document.getElementById('api-key-input');
     const sheetIdInput = document.getElementById('sheet-id-input');
     if (apiKeyInput) apiKeyInput.value = getApiKey() || '';
-    if (sheetIdInput) sheetIdInput.value = localStorage.getItem('google_sheet_id') || '';
+    if (sheetIdInput) {
+        const savedId = localStorage.getItem('google_sheet_id');
+        sheetIdInput.value = savedId || DEFAULT_SHEET_ID || '';
+    }
 
     // スプレッドシートID保存
     document.getElementById('sheet-id-save')?.addEventListener('click', async () => {
-        const id = sheetIdInput?.value.trim();
-        if (id) {
-            localStorage.setItem('google_sheet_id', id);
-            addLog('スプレッドシートIDを保存しました。再ロード中...', 'info');
-            await loadMasterData();
-            showToast('マスター設定を更新しました');
-        }
+        const id = sheetIdInput?.value.trim() || '';
+        localStorage.setItem('google_sheet_id', id);
+        addLog('スプレッドシートIDを更新しました。', 'info');
+        await loadMasterData();
+        showToast('マスター設定を更新しました');
     });
 
     // APIキー保存
@@ -88,7 +90,12 @@ async function loadMasterData() {
     const indicator = document.getElementById('master-status-indicator');
     const dot = indicator?.querySelector('.status-dot');
     const text = indicator?.querySelector('.status-text');
-    const sheetId = localStorage.getItem('google_sheet_id')?.trim();
+    let sheetId = localStorage.getItem('google_sheet_id')?.trim();
+
+    // LocalStorageになければデフォルト値を使用
+    if (!sheetId) {
+        sheetId = DEFAULT_SHEET_ID;
+    }
 
     if (dot) dot.className = 'status-dot dot-loading';
     if (text) text.textContent = '読込中...';

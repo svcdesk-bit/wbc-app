@@ -55,6 +55,9 @@ export const PITCHER_COLUMN_MAP = {
 // Gemini APIのデフォルトキー
 export const DEFAULT_API_KEY = 'AIzaSyAw809H1yqTGIoVR7yTf6Lul9xjXUr14Nk';
 
+// GoogleスプレッドシートのデフォルトID（共有用）
+export const DEFAULT_SHEET_ID = 'https://docs.google.com/spreadsheets/d/1x9cN_GuYLxAj1hmsRl8L3saoFM9FugveNtgViPXhpM4/edit?gid=0#gid=0';
+
 // Gemini APIのデフォルトモデル名
 export const GEMINI_MODEL = 'gemini-2.5-flash';
 
