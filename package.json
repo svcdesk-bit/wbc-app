@@ -1,0 +1,13 @@
+{
+  "name": "wbc-data-extractor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WBC Data Extraction Tool",
+  "dependencies": {
+    "serve": "^14.2.1"
+  },
+  "scripts": {
+    "start": "serve .",
+    "dev": "serve ."
+  }
+}

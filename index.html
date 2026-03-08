@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="WBC成績表画像からAI画像認識でデータを抽出し、マスターデータと照合してCSV出力するツール">
+  <title>WBC データ抽出・変換ツール</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚾</text></svg>">
+</head>
+
+<body>
+
+  <!-- ヘッダー -->
+  <header class="header">
+    <div class="header-logo">
+      <span class="logo-icon">⚾</span>
+      <div>
+        <h1>WBC Data Extractor</h1>
+        <span class="subtitle">AI画像認識によるデータ抽出・変換ツール</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="admin-toggle-btn" class="btn-icon" title="管理者設定">⚙️ 設定</button>
+      <button id="sidebar-toggle" title="サイドバー切り替え">☰</button>
+    </div>
+  </header>
+
+  <div class="app-layout">
+
+    <!-- サイドバー -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-info">
+        <h3>📖 使い方</h3>
+        <ul class="guide-list">
+          <li>1. 成績表画像をアップロード</li>
+          <li>2. AIが自動でデータを抽出</li>
+          <li>3. 「選手ID」でマスターと照合</li>
+          <li>4. CSVをダウンロード</li>
+        </ul>
+        <div class="master-status-card">
+          <h4>マスターデータ状態</h4>
+          <div id="master-status-indicator" class="status-indicator">
+            <span class="status-dot dot-off"></span>
+            <span class="status-text">未読込</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 管理者パネル（モーダル） -->
+    <div id="admin-modal" class="modal-overlay">
+      <div class="modal-content admin-card shadow-premium">
+        <div class="modal-header">
+          <h2>🔐 管理者パネル</h2>
+          <button id="admin-close-btn" class="btn-icon">✖</button>
+        </div>
+        <div class="modal-body">
+          <!-- API設定 -->
+          <div class="field-section">
+            <label class="field-label">🔑 Gemini APIキー</label>
+            <div class="input-row">
+              <input type="password" id="api-key-input" class="input" placeholder="Gemini APIキーを入力">
+              <button id="api-key-save" class="btn btn-sm">保存</button>
+            </div>
+          </div>
+          <!-- Google Sheets設定 -->
+          <div class="field-section">
+            <label class="field-label">📊 マスターデータ (Google Sheets ID)</label>
+            <div class="input-row">
+              <input type="text" id="sheet-id-input" class="input" placeholder="スプレッドシートのID">
+              <button id="sheet-id-save" class="btn btn-sm">適用</button>
+            </div>
+            <p class="help-text">※シートを「ウェブに公開(CSV)」に設定してください。</p>
+          </div>
+          <!-- テンプレート管理 -->
+          <div class="field-section">
+            <label class="field-label">📋 テンプレートCSV管理</label>
+            <div id="template-file-list" class="file-list-mini"></div>
+            <input type="file" id="template-upload-input" class="hidden-input" accept=".csv" multiple>
+            <button id="template-upload-btn" class="btn btn-outline btn-sm btn-block">📁 登録</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- メインコンテンツ -->
+    <main id="main-content" class="main-content">
+
+      <!-- 画像アップロード -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><span class="icon">📸</span> 成績表画像アップロード</h2>
+        </div>
+        <div id="image-drop-zone" class="drop-zone">
+          <div class="drop-zone-icon">🖼️</div>
+          <div class="drop-zone-text">画像をドラッグ&ドロップ、またはクリックして選択</div>
+          <div class="drop-zone-hint">対応形式: PNG, JPG, WebP</div>
+        </div>
+        <input type="file" id="image-upload-input" class="hidden-input" accept="image/*">
+        <div id="image-preview" class="image-preview"></div>
+
+        <div class="process-section">
+          <button id="process-btn" type="button" class="btn btn-primary" disabled>⚡ データ処理実行</button>
+          <button id="hard-reset-btn" type="button" class="btn btn-outline btn-sm"
+            style="color: var(--text-muted); margin-left: auto;">🔄 アプリをリセット</button>
+        </div>
+      </div>
+
+      <!-- 処理結果 -->
+      <div id="result-section" class="result-section">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title"><span class="icon">📊</span> 抽出結果</h2>
+            <button id="download-btn" type="button" class="btn btn-success" disabled>📥 CSVダウンロード</button>
+          </div>
+          <div class="result-meta">
+            <span id="result-type" class="result-tag tag-type"></span>
+            <span id="result-country" class="result-tag tag-country"></span>
+          </div>
+          <div class="table-container">
+            <table id="result-table" class="data-table"></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ログ -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><span class="icon">📝</span> ステータスログ</h2>
+        </div>
+        <div id="log-container" class="log-container"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+
+</html>
