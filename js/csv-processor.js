@@ -90,7 +90,7 @@ function parseCSVLine(line) {
 }
 
 /**
- * 配列をCSVテキストに変換（BOM付きUTF-8）
+ * 配列をCSVテキストに変換
  */
 export function toCSVText(headers, rows) {
     const escapeField = (field) => {
@@ -116,6 +116,7 @@ function normalizeHeaderName(header) {
     // 柔軟なマッチング
     if (/英語選手名|english.*name|player.*name.*en|英語.*名/.test(h)) return '英語選手名';
     if (/选手名|選手名|名前|氏名|name|player|選手.*名/.test(h)) return '選手名';
+    if (/成绩id|成績id/.test(h)) return '成績ID';
     if (/选手id|選手id|id|player.*id/.test(h)) return '選手ID';
     if (/国名|国籍|チーム|国|country|team/.test(h)) return '国名';
     return header.trim();
@@ -364,11 +365,12 @@ export function matchPlayers(extractedPlayers, masterData) {
             if (found) console.log('  -> Match (Partial English)');
         }
 
-        // 4. 日本語名の一致 (フォールバック)
+        // 4. 日本語名の一致 (フォールバック & 強化)
         if (!found) {
-            const pSymNorm = normalizeSymbolicName(pRaw);
-            found = masterEntries.find(m => m.normJp === pSymNorm)?.original;
-            if (found) console.log('  -> Match (Japanese Fallback)');
+            // AIが抽出したカナ（player.PLAYER_KANA）とマスターの日本語名（m.normJp）を比較
+            const pKanaNorm = normalizeSymbolicName(player.PLAYER_KANA || pRaw);
+            found = masterEntries.find(m => m.normJp === pKanaNorm || m.normJp.includes(pKanaNorm) || pKanaNorm.includes(m.normJp))?.original;
+            if (found) console.log(`  -> Match (Japanese/Kana Match): "${pKanaNorm}"`);
         }
 
         if (found) {
@@ -454,10 +456,14 @@ export async function populateTemplate(type, matchedPlayers) {
 
     const columnMap = type === 'batter' ? BATTER_COLUMN_MAP : PITCHER_COLUMN_MAP;
     const idColIndex = headers.findIndex(h => h === '選手ID');
+    const scoreIdColIndex = headers.findIndex(h => h === '成績ID');
 
-    if (idColIndex === -1) {
-        throw new Error('テンプレートCSVに「選手ID」カラムが見つかりません（ヘッダーを確認してください）');
+    if (idColIndex === -1 && scoreIdColIndex === -1) {
+        throw new Error('テンプレートCSVに「選手ID」または「成績ID」カラムが見つかりません');
     }
+
+    // 出力用ヘッダーはテンプレートそのままを使用
+    const outputHeaders = rawHeaders;
 
     // 選手IDでインデックスを構築
     const playerById = {};
@@ -472,7 +478,9 @@ export async function populateTemplate(type, matchedPlayers) {
 
     // 各行を更新
     for (let i = 0; i < rows.length; i++) {
-        const rowId = (rows[i][idColIndex] || '').trim();
+        // 選手IDまたは成績IDのどちらからでも照合IDを取得
+        const rowId = ((idColIndex !== -1 ? rows[i][idColIndex] : '') ||
+            (scoreIdColIndex !== -1 ? rows[i][scoreIdColIndex] : '') || '').trim();
         if (!rowId || !playerById[rowId]) continue;
 
         // 【追加ルール】41行目以降（i >= 40）で、既に一度更新されたIDならスキップ
@@ -482,6 +490,10 @@ export async function populateTemplate(type, matchedPlayers) {
         }
 
         const player = playerById[rowId];
+
+        // テンプレートのID列を更新（両方あれば両方入れる）
+        if (idColIndex !== -1) rows[i][idColIndex] = String(player.選手ID);
+        if (scoreIdColIndex !== -1) rows[i][scoreIdColIndex] = String(player.選手ID);
 
         // マッピングに基づいてカラムを更新
         for (const [engKey, jpKey] of Object.entries(columnMap)) {
@@ -504,25 +516,47 @@ export async function populateTemplate(type, matchedPlayers) {
         updatedIds.add(rowId);
     }
 
-    return { headers, rows };
+    return { headers: outputHeaders, rows };
 }
 
 /**
- * CSVをBOM付きUTF-8でダウンロード
+ * CSVをShift-JISでダウンロード
  * @param {string} filename
  * @param {string[]} headers
  * @param {string[][]} rows
  */
 export function downloadCSV(filename, headers, rows) {
     const csvText = toCSVText(headers, rows);
-    const bom = '\uFEFF';
-    const blob = new Blob([bom + csvText], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+
+    // Encoding.js を使用して Shift-JIS に変換
+    // ブラウザのグローバル変数 Encoding を使用
+    if (typeof Encoding !== 'undefined') {
+        const unicodeArray = Encoding.stringToCode(csvText);
+        const sjisBuffer = new Uint8Array(Encoding.convert(unicodeArray, {
+            to: 'SJIS',
+            from: 'UNICODE'
+        }));
+        const blob = new Blob([sjisBuffer], { type: 'text/csv;charset=shift_jis' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } else {
+        // フォールバック (UTF-8)
+        const bom = '\uFEFF';
+        const blob = new Blob([bom + csvText], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        console.warn('Encoding.js is not loaded. Fallback to UTF-8.');
+    }
 }

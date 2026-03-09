@@ -338,7 +338,7 @@ function displayResults(type, players, countryCode) {
 
     const thead = `<tr>${keys.map(k => `<th>${k === 'PLAYER_KANA' ? '抽出カナ' : k}</th>`).join('')}</tr>`;
     const tbody = players.map((p, idx) => {
-        const rowId = (p['選手ID'] || p['ID'] || '').toString();
+        const rowId = (p['選手ID'] || p['成績ID'] || p['ID'] || '').toString();
         const rowClass = rowId ? '' : ' class="row-unmatched"';
         return `<tr${rowClass}>${keys.map(k => {
             if (k === '選手ID' && !rowId) {
@@ -358,6 +358,7 @@ function displayResults(type, players, countryCode) {
             const newId = e.target.value.trim();
             if (players[idx]) {
                 players[idx]['選手ID'] = newId;
+                players[idx]['成績ID'] = newId; // テンプレート流し込み用
                 addLog(`選手 「${players[idx].PLAYER}」 に ID ${newId} を手動設定しました`, 'info');
             }
         });
