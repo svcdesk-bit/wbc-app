@@ -1063,3 +1063,12 @@ body::before {
 .row-unmatched td {
   border-bottom: 1px solid rgba(239, 68, 68, 0.2) !important;
 }
+
+/* èdï°çsÇÃã≠í≤ */
+.row-duplicate {
+  background-color: rgba(255, 165, 0, 0.1) !important;
+}
+
+.row-duplicate td {
+  border-bottom: 1px solid rgba(255, 165, 0, 0.3) !important;
+}

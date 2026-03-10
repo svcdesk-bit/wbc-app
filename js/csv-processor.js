@@ -227,6 +227,7 @@ function stripPosition(name) {
     let changed = true;
     while (changed) {
         changed = false;
+        // 末尾のポジションを除去
         for (const pos of POSITION_ABBRS) {
             const regex = new RegExp(`\\s+${pos}$`, 'i');
             if (regex.test(trimmed)) {
@@ -236,6 +237,10 @@ function stripPosition(name) {
             }
         }
     }
+
+    // 冒頭の数字とスペースを除去（例: "3 Logan Allen" -> "Logan Allen"）
+    trimmed = trimmed.replace(/^\d+[\s・]+/, '').trim();
+
     return trimmed;
 }
 
@@ -376,6 +381,7 @@ export function matchPlayers(extractedPlayers, masterData) {
         if (found) {
             matched.push({
                 ...player,
+                PLAYER: pStripped, // 数字やポジションを除去した名前に更新（ユーザー要望）
                 選手ID: found['選手ID'] || '',
                 国名: found['国名'] || '',
                 マスター選手名: found['選手名'] || found['英語選手名'] || ''
@@ -491,9 +497,8 @@ export async function populateTemplate(type, matchedPlayers) {
 
         const player = playerById[rowId];
 
-        // テンプレートのID列を更新（両方あれば両方入れる）
+        // テンプレートのID列を更新（選手IDのみ、成績IDは何も書き込まない）
         if (idColIndex !== -1) rows[i][idColIndex] = String(player.選手ID);
-        if (scoreIdColIndex !== -1) rows[i][scoreIdColIndex] = String(player.選手ID);
 
         // マッピングに基づいてカラムを更新
         for (const [engKey, jpKey] of Object.entries(columnMap)) {

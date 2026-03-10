@@ -360,10 +360,12 @@ function displayResults(type, players, countryCode) {
                 players[idx]['選手ID'] = newId;
                 players[idx]['成績ID'] = newId; // テンプレート流し込み用
                 addLog(`選手 「${players[idx].PLAYER}」 に ID ${newId} を手動設定しました`, 'info');
+                checkDuplicateIds(); // 重複チェック再実行
             }
         });
     });
 
+    checkDuplicateIds(); // 初回表示時にもチェック
     document.getElementById('result-section').style.display = 'block';
 
     const dlBtn = document.getElementById('download-btn');
@@ -371,6 +373,47 @@ function displayResults(type, players, countryCode) {
         dlBtn.dataset.type = type;
         dlBtn.dataset.countryCode = countryCode;
         dlBtn.disabled = false;
+    }
+}
+
+/**
+ * 表示中のテーブルで選手IDの重複をチェックし、警告を表示する
+ */
+function checkDuplicateIds() {
+    const table = document.getElementById('result-table');
+    if (!table) return;
+
+    const rows = table.querySelectorAll('tbody tr');
+    const idCounts = {};
+    const rowData = [];
+
+    // 各行のIDを収集
+    rows.forEach((row, idx) => {
+        const idInput = row.querySelector('.manual-id-input');
+        const id = idInput ? idInput.value.trim() : row.cells[0].textContent.trim();
+
+        rowData.push({ row, id });
+        if (id && id !== '❌未照合') {
+            idCounts[id] = (idCounts[id] || 0) + 1;
+        }
+    });
+
+    // 重複クラスの付け外し
+    let duplicateFound = false;
+    const duplicateIds = new Set();
+
+    rowData.forEach(item => {
+        if (item.id && idCounts[item.id] > 1) {
+            item.row.classList.add('row-duplicate');
+            duplicateIds.add(item.id);
+            duplicateFound = true;
+        } else {
+            item.row.classList.remove('row-duplicate');
+        }
+    });
+
+    if (duplicateFound) {
+        addLog(`⚠️ 警告: 選手ID [${Array.from(duplicateIds).join(', ')}] が重複しています。`, 'warning');
     }
 }
 
