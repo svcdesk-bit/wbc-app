@@ -341,8 +341,8 @@ function displayResults(type, players, countryCode) {
         const rowId = (p['選手ID'] || p['成績ID'] || p['ID'] || '').toString();
         const rowClass = rowId ? '' : ' class="row-unmatched"';
         return `<tr${rowClass}>${keys.map(k => {
-            if (k === '選手ID' && !rowId) {
-                return `<td><input type="text" class="input-inline manual-id-input" placeholder="ID入力" data-index="${idx}"></td>`;
+            if (k === '選手ID') {
+                return `<td><input type="text" class="input-inline manual-id-input" value="${rowId}" placeholder="ID入力" data-index="${idx}"></td>`;
             }
             const val = p[k] ?? '';
             return `<td>${val}</td>`;
